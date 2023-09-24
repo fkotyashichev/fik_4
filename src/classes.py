@@ -118,3 +118,101 @@ class HH(Engine):
         with open('hhvacancy.json', 'w') as f:
             json.dump(writer, f, indent=2)
 
+
+class Vacancy_list:
+    """Класс для работы с уже найденными вакансиями"""
+    vacancy = []
+    data = '1'
+    __slots__ = ('source', 'vacancy_name', 'url', 'city', 'requirement', 'currency', 'salary_from', 'salary_to')
+
+    def __init__(self, source="internet", vacancy_name="net", url="http://ssilki.net", city="(Город не указан)", requirement="Не указано требований", currency="(Валюта не указана)", salary_from=0.0, salary_to="(Предельная зарплата не указана)"):
+        self.source = source
+        self.vacancy_name = vacancy_name
+        self.url = url
+        self.city = city
+        self.requirement = requirement
+        self.currency = currency
+        self.salary_from = salary_from
+        self.salary_to = salary_to
+        Vacancy_list.vacancy.append(self)
+
+    def __str__(self):
+        return (f"\nНа сайте: {self.source} мы нашли вакансию: {self.vacancy_name} \nс зарплатой от "
+                f"{self.salary_from} "
+                f"{self.currency}"
+                f" до {self.salary_to} {self.currency}.\n"
+                f"В городе {self.city if not None else 'город не указан'}. \n"
+                f"Требования/описание вакансии: {self.requirement} \n"
+                f"Вакансия находится по ссылке: {self.url} \n")
+
+    @classmethod
+    def reed_json(cls, filename):
+        """Считывает все найденные ранее вакансии из json файла"""
+        reader = json.loads(open(filename).read())
+        line = reader[-1]
+        for value in line.values():
+            cls.data = value
+        for line in reader[:-1]:
+            source = line['source']
+            vacancy_name = line['name']
+            url = line['url']
+            city = line['city']
+            requirement = line['requirement']
+            currency = line['currency']
+            salary_from = line['salary_from']
+            salary_to = line['salary_to']
+            Vacancy_list(source, vacancy_name, url, city, requirement, currency, salary_from, salary_to)
+
+    @classmethod
+    def save_json(cls):
+        """Сохраняем отобранные вакансии в файл, названный по запросу"""
+        filename = cls.data.split(' ')
+        filename = '_'.join(filename) + '.json'
+        list_vacancy = []
+        for i in range(cls.__len__()):
+            if cls.vacancy[i].source in ['HeadHunter', 'SuperJob']:
+                info = {
+                    'source': cls.vacancy[i].source,
+                    'name': cls.vacancy[i].vacancy_name,
+                    'city': cls.vacancy[i].city,
+                    'salary_from': cls.vacancy[i].salary_from,
+                    'salary_to': cls.vacancy[i].salary_to,
+                    'currency': cls.vacancy[i].currency,
+                    'url': cls.vacancy[i].url,
+                    "requirement": cls.vacancy[i].requirement,
+                }
+                list_vacancy.append(info)
+
+        with open(filename, 'w+', encoding="UTF-8") as f:
+            json.dump(list_vacancy, f, indent=2, ensure_ascii=False)
+
+    @classmethod
+    def __len__(cls):
+        return len(cls.vacancy)
+
+    @classmethod
+    def delete_vacancy(cls, prev, tail=-1):
+        if cls.__len__ > 0 and prev < cls.__len__:
+            del cls.vacancy[prev:tail]
+
+    def __gt__(self, other):
+        return self.salary_from > other.salary_from
+
+    @classmethod
+    def get_vacancy_by_salary(cls, salary_from):
+        cls.sorted_vacancy_by_salary()
+        cls.vacancy = list(filter(lambda vac: vac.salary_from > salary_from, cls.vacancy))
+
+    @classmethod
+    def sorted_vacancy_by_salary(cls):
+        for x in range(cls.__len__()-1):
+            for y in range(x+1, cls.__len__()):
+                if not cls.vacancy[x] > cls.vacancy[y]:
+                    a = cls.vacancy[x]
+                    cls.vacancy[x] = cls.vacancy[y]
+                    cls.vacancy[y] = a
+
+    @classmethod
+    def top_vacancy(cls, n: int):
+        cls.sorted_vacancy_by_salary()
+        cls.vacancy = cls.vacancy[:n]
